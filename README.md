@@ -49,7 +49,3 @@ git commit -m "Bump version to x.y.z"
 git tag -a vx.y.z -m "Release version x.y.z"
 git push origin main --tags
 ```
-
-## License
-
-This chart is licensed under the same terms as Dify itself. See the [Dify license](https://github.com/langgenius/dify/blob/main/LICENSE) for details. 
