@@ -1,0 +1,182 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dify-nginx
+  namespace: {{ .Release.Namespace | default "dify" }}
+data:
+  nginx.conf: |-
+    user  nginx;
+    worker_processes  auto;
+
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+
+
+    events {
+        worker_connections  1024;
+    }
+
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        keepalive_timeout  65;
+
+        #gzip  on;
+        client_max_body_size 15M;
+
+        server {
+        listen 80;
+        server_name _;
+
+        location /console/api {
+          proxy_pass http://dify-api:5001;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+
+        location /api {
+          proxy_pass http://dify-api:5001;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+
+        location /v1 {
+          proxy_pass http://dify-api:5001;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+
+        location /files {
+          proxy_pass http://dify-api:5001;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+
+        location / {
+          proxy_pass http://dify-web:3000;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+
+        # If you want to support HTTPS, please uncomment the code snippet below
+        #listen 443 ssl;
+        #ssl_certificate ./../ssl/your_cert_file.cer;
+        #ssl_certificate_key ./../ssl/your_cert_key.key;
+        #ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+        #ssl_prefer_server_ciphers on;
+        #ssl_session_cache shared:SSL:10m;
+        #ssl_session_timeout 10m;
+    }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-nginx
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    app: dify-nginx
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: dify-nginx
+  template:
+    metadata:
+      labels:
+        app: dify-nginx
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      automountServiceAccountToken: false
+      containers:
+      - name: dify-nginx
+        image: {{ .Values.nginx.image.registry }}/{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+        resources:
+{{ toYaml .Values.nginx.resources | indent 10 }}
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: dify-nginx
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: dify-nginx-config
+          mountPath: /etc/nginx/conf.d
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      volumes:
+      - name: dify-nginx
+        configMap:
+          name: dify-nginx
+      # Persistent volume could be better
+      - name: dify-nginx-config
+        emptyDir: {}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: dify-nginx
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    app: dify-nginx
+  type: ClusterIP
+  ports:
+  - name: dify-nginx
+    port: 80
+    targetPort: 80
+
+{{- if eq .Values.nginx.service.type "NodePort" }}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: dify-nginx-nodeport
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    app: dify-nginx
+  type: NodePort
+  ports:
+  - name: dify-nginx
+    port: 80
+    targetPort: 80
+    nodePort: {{ .Values.nginx.service.nodePort }}
+{{- end }} 

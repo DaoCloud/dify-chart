@@ -1,0 +1,169 @@
+# Default values for dify-chart
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # Environment name
+  environment: production
+  # Storage settings
+  storage:
+    type: hostPath
+    hostPath:
+      basePath: /root/dify
+
+# Image settings
+image:
+  registry: docker.m.daocloud.io
+  pullPolicy: IfNotPresent
+  
+# Credentials and secrets
+credentials:
+  postgres:
+    username: postgres
+    password: difyai123456
+    database: dify
+    # External PostgreSQL host (used when postgres.enabled=false)
+    host: ""
+    # External PostgreSQL port (used when postgres.enabled=false)
+    port: 5432
+  redis:
+    username: ""
+    password: difyai123456
+    # External Redis host (used when redis.enabled=false)
+    host: ""
+    # External Redis port (used when redis.enabled=false)
+    port: 6379
+  weaviate:
+    apiKey: "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih"
+
+# Component settings
+api:
+  image:
+    registry: docker.m.daocloud.io
+    repository: langgenius/dify-api
+    tag: 0.15.2
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  secretKey: "sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U"
+
+worker:
+  image:
+    registry: docker.m.daocloud.io
+    repository: langgenius/dify-api
+    tag: 0.15.2
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+web:
+  image:
+    registry: docker.m.daocloud.io
+    repository: langgenius/dify-web
+    tag: 0.15.2
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+postgres:
+  enabled: true
+  image:
+    registry: docker.m.daocloud.io
+    repository: postgres
+    tag: 15-alpine
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+redis:
+  enabled: true
+  image:
+    registry: docker.m.daocloud.io
+    repository: redis
+    tag: 6-alpine
+  resources:
+    requests:
+      cpu: 100m
+      memory: 102Mi
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+
+weaviate:
+  image:
+    registry: docker.m.daocloud.io
+    repository: semitechnologies/weaviate
+    tag: 1.19.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 102Mi
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+
+sandbox:
+  image:
+    registry: docker.m.daocloud.io
+    repository: langgenius/dify-sandbox
+    tag: 0.2.10
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  apiKey: "dify-sandbox"
+
+ssrf:
+  image:
+    registry: docker.m.daocloud.io
+    repository: ubuntu/squid
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 300m
+      memory: 300Mi
+
+nginx:
+  image:
+    registry: docker.m.daocloud.io
+    repository: nginx
+    tag: stable
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  service:
+    type: NodePort
+    nodePort: 30000
+
+# Persistence settings
+persistence:
+  enabled: true 

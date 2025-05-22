@@ -1,0 +1,24 @@
+Thank you for installing {{ .Chart.Name }} (version: {{ .Chart.Version }})!
+
+Your Dify instance is now being deployed. This may take a few minutes.
+
+{{- if eq .Values.nginx.service.type "NodePort" }}
+You can access Dify by navigating to:
+  http://<node-ip>:{{ .Values.nginx.service.nodePort }}
+{{- else }}
+The Dify service is deployed as ClusterIP. To access it, you can either:
+
+1. Port-forward the service to your local machine:
+   kubectl port-forward -n {{ .Release.Namespace | default "dify" }} svc/dify-nginx 8080:80
+
+   Then access Dify at: http://localhost:8080
+
+2. Create an Ingress resource to expose the service externally.
+{{- end }}
+
+Default login credentials:
+  Username: admin@foo.com
+  Password: password
+
+For more information about Dify, please visit:
+  https://dify.ai/ 

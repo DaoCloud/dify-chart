@@ -1,0 +1,15 @@
+apiVersion: v2
+name: dify-chart
+description: A Helm chart for Dify, an open-source LLMOps platform
+type: application
+version: 0.0.1
+appVersion: "0.15.2"
+keywords:
+  - dify
+  - llm
+  - ai
+  - langchain
+home: https://dify.ai
+maintainers:
+  - name: DaoCloud
+    email: rongfu.leng@daocloud.io 

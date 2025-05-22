@@ -1,0 +1,119 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-weaviate
+  name: dify-weaviate
+  namespace: {{ .Release.Namespace | default "dify" }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-weaviate
+  name: dify-weaviate
+  namespace: {{ .Release.Namespace | default "dify" }}
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-weaviate
+  name: dify-weaviate
+  namespace: {{ .Release.Namespace | default "dify" }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dify-weaviate
+subjects:
+- kind: ServiceAccount
+  name: dify-weaviate
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dify-weaviate
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    matchLabels:
+      app: dify-weaviate
+  serviceName: "dify-weaviate"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dify-weaviate
+    spec:
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: dify-weaviate
+      volumes:
+      - name: weaviate-data
+        {{- if eq .Values.global.storage.type "hostPath" }}
+        hostPath:
+          path: {{ .Values.global.storage.hostPath.basePath }}/db/weaviate/data
+          type: DirectoryOrCreate
+        {{- else }}
+        persistentVolumeClaim:
+          claimName: dify-weaviate-data
+        {{- end }}
+      containers:
+      - name: dify-weaviate
+        image: {{ .Values.weaviate.image.registry }}/{{ .Values.weaviate.image.repository }}:{{ .Values.weaviate.image.tag }}
+        ports:
+        - containerPort: 8080
+          name: weaviate-p
+        resources:
+{{ toYaml .Values.weaviate.resources | indent 10 }}
+        env:
+        - name: QUERY_DEFAULTS_LIMIT
+          value: "25"
+        - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+          value: "false"
+        - name: PERSISTENCE_DATA_PATH
+          value: "/var/lib/weaviate"
+        - name: "DEFAULT_VECTORIZER_MODULE"
+          value: "none"
+        - name: "AUTHENTICATION_APIKEY_ENABLED"
+          value: "true"
+        - name: "AUTHENTICATION_APIKEY_ALLOWED_KEYS"
+          value: {{ .Values.credentials.weaviate.apiKey | quote }}
+        - name: "AUTHENTICATION_APIKEY_USERS"
+          value: "hello@dify.ai"
+        - name: "AUTHORIZATION_ADMINLIST_ENABLED"
+          value: "true"
+        - name: "AUTHORIZATION_ADMINLIST_USERS"
+          value: "hello@dify.ai"
+        volumeMounts:
+        - name: weaviate-data
+          mountPath: /var/lib/weaviate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-weaviate
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    app: dify-weaviate
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: weaviate
+    protocol: TCP
+    port: 8080
+    targetPort: 8080 

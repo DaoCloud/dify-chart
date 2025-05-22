@@ -1,0 +1,5 @@
+owner: DaoCloud
+git-repo: dify-chart
+charts-repo: https://daocloud.github.io/dify-chart
+release-name-template: "{{ .Version }}"
+skip-existing: true 

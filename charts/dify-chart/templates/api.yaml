@@ -1,0 +1,159 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dify-api
+  labels:
+    app.kubernetes.io/instance: dify-api
+    app: dify-api
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  revisionHistoryLimit: 1
+  minReadySeconds: 10
+  serviceName: dify-api
+  selector:
+    matchLabels:
+      app: dify-api
+  template:
+    metadata:
+      labels:
+        app: dify-api
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      volumes:
+      - name: dify-api-storage
+        {{- if eq .Values.global.storage.type "hostPath" }}
+        hostPath:
+          path: {{ .Values.global.storage.hostPath.basePath }}/app/api/storage
+          type: DirectoryOrCreate
+        {{- else }}
+        persistentVolumeClaim:
+          claimName: dify-api-storage
+        {{- end }}
+      containers:
+      - name: dify-api
+        image: {{ .Values.api.image.registry }}/{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
+        env:
+        - name: MODE
+          value: api
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: SECRET_KEY
+          value: {{ .Values.api.secretKey | quote }}
+        - name: CONSOLE_WEB_URL
+          value: ""
+        - name: INIT_PASSWORD
+          value: password
+        - name: CONSOLE_API_URL
+          value: ""
+        - name: SERVICE_API_URL
+          value: ""
+        - name: APP_WEB_URL
+          value: ""
+        - name: FILES_URL
+          value: ""
+        - name: MIGRATION_ENABLED
+          value: "true"
+        - name: DB_USERNAME
+          value: {{ .Values.credentials.postgres.username }}
+        - name: DB_PASSWORD
+          value: {{ .Values.credentials.postgres.password }}
+        - name: DB_HOST
+          value: {{ if .Values.postgres.enabled }}dify-postgres{{ else }}{{ .Values.credentials.postgres.host }}{{ end }}
+        - name: DB_PORT
+          value: {{ if .Values.postgres.enabled }}'5432'{{ else }}{{ .Values.credentials.postgres.port | quote }}{{ end }}
+        - name: DB_DATABASE
+          value: {{ .Values.credentials.postgres.database }}
+        - name: REDIS_HOST
+          value: {{ if .Values.redis.enabled }}dify-redis{{ else }}{{ .Values.credentials.redis.host }}{{ end }}
+        - name: REDIS_PORT
+          value: {{ if .Values.redis.enabled }}'6379'{{ else }}{{ .Values.credentials.redis.port | quote }}{{ end }}
+        - name: REDIS_USERNAME
+          value: {{ .Values.credentials.redis.username | quote }}
+        - name: REDIS_PASSWORD
+          value: {{ .Values.credentials.redis.password }}
+        - name: REDIS_USE_SSL
+          value: "false"
+        - name: REDIS_DB
+          value: "0"
+        - name: CELERY_BROKER_URL
+          value: >-
+            redis://$(REDIS_USERNAME):$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/1
+        - name: WEB_API_CORS_ALLOW_ORIGINS
+          value: "*"
+        - name: CONSOLE_CORS_ALLOW_ORIGINS
+          value: "*"
+        - name: STORAGE_TYPE
+          value: opendal
+        - name: OPENDAL_SCHEME
+          value: fs
+        - name: OPENDAL_FS_ROOT
+          value: storage
+        - name: STORAGE_LOCAL_PATH
+          value: /app/api/storage
+        - name: VECTOR_STORE
+          value: weaviate
+        - name: WEAVIATE_HOST
+          value: dify-weaviate
+        - name: WEAVIATE_PORT
+          value: '8080'
+        - name: WEAVIATE_ENDPOINT
+          value: http://$(WEAVIATE_HOST):$(WEAVIATE_PORT)
+        - name: WEAVIATE_API_KEY
+          value: {{ .Values.credentials.weaviate.apiKey | quote }}
+        - name: CODE_EXECUTION_ENDPOINT
+          value: http://dify-sandbox:8194
+        - name: CODE_EXECUTION_API_KEY
+          value: {{ .Values.sandbox.apiKey }}
+        - name: CODE_MAX_NUMBER
+          value: "9223372036854775807"
+        - name: CODE_MIN_NUMBER
+          value: "-9223372036854775808"
+        - name: CODE_MAX_STRING_LENGTH
+          value: "80000"
+        - name: TEMPLATE_TRANSFORM_MAX_LENGTH
+          value: "80000"
+        - name: CODE_MAX_STRING_ARRAY_LENGTH
+          value: "30"
+        - name: CODE_MAX_OBJECT_ARRAY_LENGTH
+          value: "30"
+        - name: CODE_MAX_NUMBER_ARRAY_LENGTH
+          value: "1000"
+        - name: INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
+          value: "1000"
+          # uncomment to enable SSRF
+        - name: SSRF_PROXY_HTTP_URL
+          value: 'http://dify-ssrf:3128'
+        - name: SSRF_PROXY_HTTPS_URL
+          value: 'http://dify-ssrf:3128'
+        - name: SENTRY_DSN
+          value: ''
+        - name: SENTRY_TRACES_SAMPLE_RATE
+          value: '1.0'
+        - name: SENTRY_PROFILES_SAMPLE_RATE
+          value: '1.0'
+        resources:
+{{ toYaml .Values.api.resources | indent 10 }}
+        ports:
+        - containerPort: 5001
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: dify-api-storage
+          mountPath: /app/api/storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-api
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  ports:
+  - port: 5001
+    targetPort: 5001
+    protocol: TCP
+    name: dify-api
+  type: ClusterIP
+  selector:
+    app: dify-api 

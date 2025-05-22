@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-sandbox
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    app: dify-sandbox
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: dify-sandbox
+  template:
+    metadata:
+      labels:
+        app: dify-sandbox
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: dify-sandbox
+        image: {{ .Values.sandbox.image.registry }}/{{ .Values.sandbox.image.repository }}:{{ .Values.sandbox.image.tag }}
+        env:
+        - name: API_KEY
+          value: {{ .Values.sandbox.apiKey | quote }}
+        - name: GIN_MODE
+          value: "release"
+        - name: WORKER_TIMEOUT
+          value: "15"
+        - name: ENABLE_NETWORK
+          value: "true"
+        - name: SANDBOX_PORT
+          value: "8194"
+          # uncomment if you want to use proxy
+        - name: HTTP_PROXY
+          value: 'http://dify-ssrf:3128'
+        - name: HTTPS_PROXY
+          value: 'http://dify-ssrf:3128'
+        resources:
+{{ toYaml .Values.sandbox.resources | indent 10 }}
+        ports:
+        - containerPort: 8194
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-sandbox
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  ports:
+  - port: 8194
+    targetPort: 8194
+    protocol: TCP
+    name: dify-sandbox
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: dify-sandbox 

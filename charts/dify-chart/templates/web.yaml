@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-web
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    app: dify-web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: dify-web
+  template:
+    metadata:
+      labels:
+        app: dify-web
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      automountServiceAccountToken: false
+      containers:
+      - name: dify-web
+        image: {{ .Values.web.image.registry }}/{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}
+        env:
+        - name: EDITION
+          value: SELF_HOSTED
+        - name: CONSOLE_API_URL
+          value: ""
+        - name: APP_API_URL
+          value: ""
+        - name: SENTRY_DSN
+          value: ""
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "0"
+        - name: TEXT_GENERATION_TIMEOUT_MS
+          value: "60000"
+        - name: CSP_WHITELIST
+          value: ""
+        resources:
+{{ toYaml .Values.web.resources | indent 10 }}
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-web
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: dify-web
+  type: ClusterIP
+  selector:
+    app: dify-web 

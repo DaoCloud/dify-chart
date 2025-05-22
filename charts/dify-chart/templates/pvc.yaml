@@ -1,0 +1,50 @@
+{{- if ne .Values.global.storage.type "hostPath" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify-postgres-data
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify-redis-data
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify-weaviate-data
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify-api-storage
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+{{- end }} 

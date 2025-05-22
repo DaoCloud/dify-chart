@@ -1,0 +1,126 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dify-worker
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    app: dify-worker
+    app.kubernetes.io/instance: dify-worker
+spec:
+  serviceName: "dify-worker"
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: dify-worker
+  template:
+    metadata:
+      labels:
+        app: dify-worker
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      volumes:
+      - name: dify-api-storage
+        {{- if eq .Values.global.storage.type "hostPath" }}
+        hostPath:
+          path: {{ .Values.global.storage.hostPath.basePath }}/app/api/storage
+          type: DirectoryOrCreate
+        {{- else }}
+        persistentVolumeClaim:
+          claimName: dify-api-storage
+        {{- end }}
+      containers:
+      - name: dify-worker
+        image: {{ .Values.worker.image.registry }}/{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+        ports:
+        - containerPort: 5001
+          protocol: TCP
+        env:
+        - name: CONSOLE_WEB_URL
+          value: ""
+        - name: MODE
+          value: worker
+        - name: LOG_LEVEL
+          value: INFO
+        - name: SECRET_KEY
+          value: {{ .Values.api.secretKey | quote }}
+        - name: DB_USERNAME
+          value: {{ .Values.credentials.postgres.username }}
+        - name: DB_PASSWORD
+          value: {{ .Values.credentials.postgres.password }}
+        - name: DB_HOST
+          value: {{ if .Values.postgres.enabled }}dify-postgres{{ else }}{{ .Values.credentials.postgres.host }}{{ end }}
+        - name: DB_PORT
+          value: {{ if .Values.postgres.enabled }}'5432'{{ else }}{{ .Values.credentials.postgres.port | quote }}{{ end }}
+        - name: DB_DATABASE
+          value: {{ .Values.credentials.postgres.database }}
+        - name: REDIS_HOST
+          value: {{ if .Values.redis.enabled }}dify-redis{{ else }}{{ .Values.credentials.redis.host }}{{ end }}
+        - name: REDIS_PORT
+          value: {{ if .Values.redis.enabled }}'6379'{{ else }}{{ .Values.credentials.redis.port | quote }}{{ end }}
+        - name: REDIS_USERNAME
+          value: {{ .Values.credentials.redis.username | quote }}
+        - name: REDIS_PASSWORD
+          value: {{ .Values.credentials.redis.password }}
+        - name: REDIS_USE_SSL
+          value: "false"
+        - name: REDIS_DB
+          value: "0"
+        - name: CELERY_BROKER_URL
+          value: >-
+            redis://$(REDIS_USERNAME):$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/1
+        - name: WEB_API_CORS_ALLOW_ORIGINS
+          value: "*"
+        - name: CONSOLE_CORS_ALLOW_ORIGINS
+          value: "*"
+        - name: STORAGE_TYPE
+          value: opendal
+        - name: OPENDAL_SCHEME
+          value: fs
+        - name: OPENDAL_FS_ROOT
+          value: storage
+        - name: STORAGE_LOCAL_PATH
+          value: /app/api/storage
+        - name: VECTOR_STORE
+          value: weaviate
+        - name: WEAVIATE_HOST
+          value: dify-weaviate
+        - name: WEAVIATE_PORT
+          value: '8080'
+        - name: WEAVIATE_ENDPOINT
+          value: http://$(WEAVIATE_HOST):$(WEAVIATE_PORT)
+        - name: WEAVIATE_API_KEY
+          value: {{ .Values.credentials.weaviate.apiKey | quote }}
+        - name: SSRF_PROXY_HTTP_URL
+          value: 'http://dify-ssrf:3128'
+        - name: SSRF_PROXY_HTTPS_URL
+          value: 'http://dify-ssrf:3128'
+        - name: SENTRY_DSN
+          value: ''
+        - name: SENTRY_TRACES_SAMPLE_RATE
+          value: '1.0'
+        - name: SENTRY_PROFILES_SAMPLE_RATE
+          value: '1.0'
+        resources:
+{{ toYaml .Values.worker.resources | indent 10 }}
+        volumeMounts:
+        - name: dify-api-storage
+          mountPath: /app/api/storage
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-worker
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  ports:
+  - protocol: TCP
+    port: 5001
+    targetPort: 5001
+  selector:
+    app: dify-worker
+  type: ClusterIP 

@@ -1,0 +1,122 @@
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-postgres
+  name: dify-postgres
+  namespace: {{ .Release.Namespace | default "dify" }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-postgres
+  name: dify-postgres
+  namespace: {{ .Release.Namespace | default "dify" }}
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: dify-postgres
+  name: dify-postgres
+  namespace: {{ .Release.Namespace | default "dify" }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dify-postgres
+subjects:
+- kind: ServiceAccount
+  name: dify-postgres
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dify-postgres
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    matchLabels:
+      app: dify-postgres 
+  serviceName: "dify-postgres"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dify-postgres
+    spec:
+      serviceAccountName: dify-postgres
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: dify-postgres
+        image: {{ .Values.postgres.image.registry }}/{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+        env:
+        - name: PGUSER
+          value: {{ .Values.credentials.postgres.username }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.credentials.postgres.password }}
+        - name: POSTGRES_DB
+          value: {{ .Values.credentials.postgres.database }}
+        livenessProbe:
+          exec:
+            command:
+            - "pg_isready"
+            - "-U"
+            - "$(PGUSER)"
+            - "-d"
+            - "$(POSTGRES_DB)"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 10
+        resources:
+{{ toYaml .Values.postgres.resources | indent 10 }}
+        ports:
+        - containerPort: 5432
+          name: postgres-port
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-data
+        {{- if eq .Values.global.storage.type "hostPath" }}
+        hostPath:
+          path: {{ .Values.global.storage.hostPath.basePath }}/db/postgres/data
+          type: DirectoryOrCreate
+        {{- else }}
+        persistentVolumeClaim:
+          claimName: dify-postgres-data
+        {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-postgres
+  namespace: {{ .Release.Namespace | default "dify" }}
+spec:
+  selector:
+    app: dify-postgres
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: postgres
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+{{- end }} 
