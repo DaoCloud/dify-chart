@@ -48,7 +48,7 @@ api:
       cpu: 200m
       memory: 256Mi
     limits:
-      cpu: 1000m
+      cpu: 1
       memory: 2Gi
   secretKey: "sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U"
 
@@ -63,7 +63,7 @@ worker:
       cpu: 200m
       memory: 256Mi
     limits:
-      cpu: 1000m
+      cpu: 1
       memory: 2Gi
 
 web:

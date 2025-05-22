@@ -851,7 +851,7 @@ spec:
             cpu: 200m
             memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 1
             memory: 2Gi
         ports:
         - containerPort: 5001
@@ -1022,7 +1022,7 @@ spec:
             cpu: 200m
             memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 1
             memory: 2Gi
         volumeMounts:
         - name: dify-api-storage
