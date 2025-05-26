@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dify.fullname" . }}-plugin-daemon
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    {{- include "dify.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-daemon
+spec:
+  type: {{ .Values.pluginDaemon.service.type }}
+  ports:
+    - port: {{ .Values.pluginDaemon.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 5003
+      targetPort: debugging
+      protocol: TCP
+      name: debugging
+  selector:
+    {{- include "dify.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-daemon 

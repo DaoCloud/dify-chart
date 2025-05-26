@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dify.fullname" . }}-plugin-daemon
+  namespace: {{ .Release.Namespace | default "dify" }}
+  labels:
+    {{- include "dify.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plugin-daemon
+spec:
+  replicas: {{ .Values.pluginDaemon.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dify.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: plugin-daemon
+  template:
+    metadata:
+      labels:
+        {{- include "dify.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: plugin-daemon
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.security.runAsUser }}
+        runAsGroup: {{ .Values.security.runAsGroup }}
+        fsGroup: {{ .Values.security.fsGroup }}
+      containers:
+        - name: {{ .Chart.Name }}-plugin-daemon
+          image: "{{ .Values.pluginDaemon.registry }}/{{ .Values.pluginDaemon.repository }}:{{ .Values.pluginDaemon.tag }}"
+          imagePullPolicy: {{ .Values.pluginDaemon.pullPolicy }}
+          env:
+            - name: SERVER_PORT
+              value: "5002"
+            - name: SERVER_KEY
+              value: "lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi"
+            - name: MAX_PLUGIN_PACKAGE_SIZE
+              value: "52428800"
+            - name: PPROF_ENABLED
+              value: "false"
+            - name: DIFY_INNER_API_URL
+              value: "http://api:5001"
+            - name: DIFY_INNER_API_KEY
+              value: "QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1"
+            - name: PLUGIN_REMOTE_INSTALLING_HOST
+              value: "0.0.0.0"
+            - name: PLUGIN_REMOTE_INSTALLING_PORT
+              value: "5003"
+            - name: PLUGIN_WORKING_PATH
+              value: "/app/storage/cwd"
+            - name: FORCE_VERIFYING_SIGNATURE
+              value: "true"
+            - name: PYTHON_ENV_INIT_TIMEOUT
+              value: "120"
+            - name: PLUGIN_MAX_EXECUTION_TIMEOUT
+              value: "600"
+            - name: PIP_MIRROR_URL
+              value: ""
+            - name: PLUGIN_STORAGE_TYPE
+              value: "local"
+            - name: PLUGIN_STORAGE_LOCAL_ROOT
+              value: "/app/storage"
+            - name: PLUGIN_INSTALLED_PATH
+              value: "plugin"
+            - name: PLUGIN_PACKAGE_CACHE_PATH
+              value: "plugin_packages"
+            - name: PLUGIN_MEDIA_CACHE_PATH
+              value: "assets"
+            # Database configuration
+            - name: DB_HOST
+              value: "dify-postgres"
+            - name: DB_PORT
+              value: {{ .Values.credentials.postgres.port | default "5432" | quote }}
+            - name: DB_USERNAME
+              value: {{ .Values.credentials.postgres.username | quote }}
+            - name: DB_PASSWORD
+              value: {{ .Values.credentials.postgres.password | quote }}
+            - name: DB_DATABASE
+              value: {{ .Values.credentials.postgres.database | quote }}
+            # Redis configuration
+            - name: REDIS_HOST
+              value: "dify-redis"
+            - name: REDIS_PORT
+              value: {{ .Values.credentials.redis.port | default "6379" | quote }}
+            - name: REDIS_USERNAME
+              value: {{ .Values.credentials.redis.username | quote }}
+            - name: REDIS_PASSWORD
+              value: {{ .Values.credentials.redis.password | quote }}
+          ports:
+            - name: http
+              containerPort: 5002
+              protocol: TCP
+            - name: debugging
+              containerPort: 5003
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.pluginDaemon.resources | nindent 12 }}
+          volumeMounts:
+            - name: storage
+              mountPath: /app/storage
+      volumes:
+        - name: storage
+          {{- if .Values.pluginDaemon.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "dify.fullname" . }}-plugin-daemon-storage
+          {{- else }}
+          hostPath:
+            path: {{ .Values.pluginDaemon.persistence.hostPath }}/plugin-daemon
+            type: DirectoryOrCreate
+          {{- end }} 
