@@ -51,7 +51,7 @@ spec:
         - name: SERVICE_API_URL
           value: ""
         - name: APP_WEB_URL
-          value: ""
+          value: "http://{{ .Values.nginx.service.nodeIP | default "127.0.0.1" }}:{{ .Values.nginx.service.nodePort }}"
         - name: FILES_URL
           value: ""
         - name: MIGRATION_ENABLED

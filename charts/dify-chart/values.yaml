@@ -48,7 +48,7 @@ api:
       cpu: 200m
       memory: 256Mi
     limits:
-      cpu: 1
+      cpu: 1000m
       memory: 2Gi
   secretKey: "sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U"
 
@@ -63,7 +63,7 @@ worker:
       cpu: 200m
       memory: 256Mi
     limits:
-      cpu: 1
+      cpu: 1000m
       memory: 2Gi
 
 web:
@@ -163,7 +163,35 @@ nginx:
   service:
     type: NodePort
     nodePort: 30000
+    nodeIP: "127.0.0.1"
 
-# Persistence settings
-persistence:
-  enabled: true 
+
+# Security configuration
+security:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+pluginDaemon:
+  enabled: true
+  replicaCount: 1
+  registry: docker.m.daocloud.io
+  repository: langgenius/dify-plugin-daemon
+  tag: "0.0.10-local"
+  pullPolicy: IfNotPresent  
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  service:
+    type: ClusterIP
+    port: 5002  
+  persistence:
+    enabled: false
+    hostPath: "/data/dify"
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
