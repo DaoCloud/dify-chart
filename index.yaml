@@ -3,6 +3,25 @@ entries:
   dify-chart:
   - apiVersion: v2
     appVersion: 0.15.2
+    created: "2025-05-26T09:00:51.539134254Z"
+    description: A Helm chart for Dify, an open-source LLMOps platform
+    digest: 4a08ee41f4466a15b5410025fc8e0edff810913121bc80f47eb33056da5fa14b
+    home: https://dify.ai
+    keywords:
+    - dify
+    - llm
+    - ai
+    - langchain
+    maintainers:
+    - email: rongfu.leng@daocloud.io
+      name: rongfu.leng
+    name: dify-chart
+    type: application
+    urls:
+    - https://github.com/DaoCloud/dify-chart/releases/download/dify-chart-0.0.2/dify-chart-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
+    appVersion: 0.15.2
     created: "2025-05-22T03:24:20.286342999Z"
     description: A Helm chart for Dify, an open-source LLMOps platform
     digest: 7c1ca17f3520e653a8ca51c5d28e5e3734ca3c9c0539cdb217778b3bad795586
@@ -20,4 +39,4 @@ entries:
     urls:
     - https://github.com/DaoCloud/dify-chart/releases/download/dify-chart-0.0.1/dify-chart-0.0.1.tgz
     version: 0.0.1
-generated: "2025-05-22T03:24:20.286348459Z"
+generated: "2025-05-26T09:00:51.539141458Z"
